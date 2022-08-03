@@ -1,0 +1,4 @@
+embed-host-controller --host-config=host-slave.xml
+
+/host=host-controller-1/core-service=management/security-realm=ManagementRealm/server-identity=secret:remove
+/host=host-controller-1/core-service=management/security-realm=ManagementRealm/server-identity=secret:add(value="aG9zdC1jb250cm9sbGVyLTE=")

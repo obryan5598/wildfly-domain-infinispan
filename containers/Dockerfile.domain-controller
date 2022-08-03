@@ -1,0 +1,15 @@
+FROM alpine
+
+COPY products/wildfly-23.0.2.Final.tar.gz /opt/
+COPY files/domain-controller.cli /tmp/
+
+RUN apk add bash openjdk11-jdk \
+ && tar -xzf /opt/wildfly-23.0.2.Final.tar.gz -C /opt/ 2>&1 > /dev/null \
+ && /opt/wildfly-23.0.2.Final/bin/add-user.sh -u admin -p admin \
+ && /opt/wildfly-23.0.2.Final/bin/add-user.sh -u host-controller-1 -p host-controller-1 \
+ && /opt/wildfly-23.0.2.Final/bin/add-user.sh -u host-controller-2 -p host-controller-2 \
+ && /opt/wildfly-23.0.2.Final/bin/jboss-cli.sh --file=/tmp/domain-controller.cli \
+ && rm -rf /opt/wildfly-23.0.2.Final/domain/configuration/domain_xml_history \
+ && rm -rf /opt/wildfly-23.0.2.Final/domain/configuration/host_xml_history
+
+ENTRYPOINT [ "/opt/wildfly-23.0.2.Final/bin/domain.sh", "--host-config=host-master.xml", "-b", "0.0.0.0", "-bmanagement=0.0.0.0" ]
