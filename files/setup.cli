@@ -89,3 +89,5 @@ run-batch
 
 /server-group=SG2:start-servers(blocking=true)
 
+deploy /tmp/appv1.war --server-groups=SG1,SG2
+deploy /tmp/appv2.war --server-groups=SG1,SG2
