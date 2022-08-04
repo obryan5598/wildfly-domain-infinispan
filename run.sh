@@ -24,7 +24,12 @@ buildah rmi -f host-controller-1 host-controller-2 domain-controller
 
 podman network rm demo
 
+unset HC2_ADDR HC1_ADDR DEMO_SUBNET DEMO_GWADDR
+
 podman network create demo
+
+DEMO_GWADDR=$(podman network inspect demo | jq -r .[0].subnets[0].gateway)
+DEMO_SUBNET=$(echo $GWADDR | cut -d '.' -f 1-3)
 
 buildah build -t domain-controller -f containers/Dockerfile.domain-controller
 
@@ -32,11 +37,13 @@ podman run --name domain-controller --hostname=domain-controller -dit -p 9990:99
 
 buildah build -t host-controller-1 -f containers/Dockerfile.host-controller-1
 
-podman run --name host-controller-1 --hostname=host-controller-1 -dit -p 8080:8080 -p 8180:8180 --network demo host-controller-1
+HC1_ADDR="$DEMO_SUBNET.$(( $(echo $DEMO_GWADDR | cut -d '.' -f 4) + 2 ))"
+podman run --name host-controller-1 --hostname=host-controller-1 -dit -p 8080:8080 -p 8180:8180 --network demo host-controller-1 -Djboss.bind.address.private=$HC1_ADDR
 
 buildah build -t host-controller-2 -f containers/Dockerfile.host-controller-2
 
-podman run --name host-controller-2 --hostname=host-controller-2 -dit -p 8081:8080 -p 8181:8180 --network demo host-controller-2
+HC2_ADDR="$DEMO_SUBNET.$(( $(echo $DEMO_GWADDR | cut -d '.' -f 4) + 3 ))"
+podman run --name host-controller-2 --hostname=host-controller-2 -dit -p 8081:8080 -p 8181:8180 --network demo host-controller-2 -Djboss.bind.address.private=$HC2_ADDR
 
 sleep 5s
 

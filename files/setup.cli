@@ -12,27 +12,80 @@
 
 /server-group=other-server-group:remove
 
-/profile=full-ha/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
+/socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H1SG1S1:add(host=host-controller-1,port=7600)
+/socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H1SG2S1:add(host=host-controller-1,port=7700)
+/socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H2SG1S2:add(host=host-controller-2,port=7600)
+/socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H2SG2S2:add(host=host-controller-2,port=7700)
 
-/profile=full-ha/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
+/profile=full-ha:clone(to-profile=P1)
 
-/server-group=SG1:add(profile=full-ha,socket-binding-group=full-ha-sockets)
+/profile=P1/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
 
-/host=host-controller-1/server-config=S1:add(group=SG1,auto-start=true)
-/host=host-controller-2/server-config=S1:add(group=SG1,auto-start=true)
+/profile=P1/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
+
+/profile=P1/subsystem=elytron/http-authentication-factory=test-auth-factory-2:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test2}]}])
+
+/profile=P1/subsystem=undertow/application-security-domain=test2:add(http-authentication-factory=test-auth-factory-2)
+
+batch
+/profile=P1/subsystem=jgroups/stack=tcpping:add
+/profile=P1/subsystem=jgroups/stack=tcpping/transport=TCP:add(socket-binding=jgroups-tcp)
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=TCPPING:add(socket-bindings=[H1SG1S1,H2SG1S2])
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=MERGE3:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=FD_SOCK:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=FD_ALL:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=VERIFY_SUSPECT:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=pbcast.NAKACK2:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=UNICAST3:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=pbcast.STABLE:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=pbcast.GMS:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=MFC:add
+/profile=P1/subsystem=jgroups/stack=tcpping/protocol=FRAG3:add
+/profile=P1/subsystem=jgroups/channel=ee:write-attribute(name=stack,value=tcpping)
+run-batch
+
+/profile=P1/subsystem=jgroups/channel=ee:write-attribute(name=statistics-enabled,value=true)
+
+/server-group=SG1:add(profile=P1,socket-binding-group=full-ha-sockets)
+
+/host=host-controller-1/server-config=H1SG1S1:add(group=SG1,auto-start=true)
+/host=host-controller-2/server-config=H2SG1S2:add(group=SG1,auto-start=true)
 
 /server-group=SG1:start-servers(blocking=true)
 
-/profile=full-ha:clone(to-profile=full-ha-2)
+/profile=full-ha:clone(to-profile=P2)
 
-/profile=full-ha-2/subsystem=elytron/http-authentication-factory=test-auth-factory-2:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test2}]}])
+/profile=P2/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
 
-/profile=full-ha-2/subsystem=undertow/application-security-domain=test2:add(http-authentication-factory=test-auth-factory-2)
+/profile=P2/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
 
-/server-group=SG2:add(profile=full-ha-2,socket-binding-group=full-ha-sockets)
+/profile=P2/subsystem=elytron/http-authentication-factory=test-auth-factory-2:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test2}]}])
 
-/host=host-controller-1/server-config=S2:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
-/host=host-controller-2/server-config=S2:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
+/profile=P2/subsystem=undertow/application-security-domain=test2:add(http-authentication-factory=test-auth-factory-2)
+
+batch
+/profile=P2/subsystem=jgroups/stack=tcpping:add
+/profile=P2/subsystem=jgroups/stack=tcpping/transport=TCP:add(socket-binding=jgroups-tcp)
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=TCPPING:add(socket-bindings=[H1SG2S1,H2SG2S2])
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=MERGE3:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=FD_SOCK:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=FD_ALL:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=VERIFY_SUSPECT:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=pbcast.NAKACK2:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=UNICAST3:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=pbcast.STABLE:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=pbcast.GMS:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=MFC:add
+/profile=P2/subsystem=jgroups/stack=tcpping/protocol=FRAG3:add
+/profile=P2/subsystem=jgroups/channel=ee:write-attribute(name=stack,value=tcpping)
+run-batch
+
+/profile=P2/subsystem=jgroups/channel=ee:write-attribute(name=statistics-enabled,value=true)
+
+/server-group=SG2:add(profile=P2,socket-binding-group=full-ha-sockets)
+
+/host=host-controller-1/server-config=H1SG2S1:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
+/host=host-controller-2/server-config=H2SG2S2:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
 
 /server-group=SG2:start-servers(blocking=true)
 

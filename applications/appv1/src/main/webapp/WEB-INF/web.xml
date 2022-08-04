@@ -2,10 +2,11 @@
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
 	 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	 xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
-	 version="4.0">
+	version="4.0">
+	<distributable />
   <login-config>
     <auth-method>BASIC</auth-method>
-    <realm-name>test</realm-name>
+    <realm-name>test1</realm-name>
   </login-config>
   <security-constraint>
     <web-resource-collection>
