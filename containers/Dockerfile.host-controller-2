@@ -6,6 +6,7 @@ COPY files/host-controller-2.cli /tmp/
 RUN apk add bash openjdk11-jdk \
  && tar -xzf /opt/wildfly-23.0.2.Final.tar.gz -C /opt/ 2>&1 > /dev/null \
  && sed -ie 's/<host/<host name="host-controller-2"/g' /opt/wildfly-23.0.2.Final/domain/configuration/host-slave.xml \
+ && /opt/wildfly-23.0.2.Final/bin/add-user.sh -a -u user -p password \
  && /opt/wildfly-23.0.2.Final/bin/jboss-cli.sh --file=/tmp/host-controller-2.cli \
  && rm -rf /opt/wildfly-23.0.2.Final/domain/configuration/domain_xml_history \
  && rm -rf /opt/wildfly-23.0.2.Final/domain/configuration/host_xml_history
