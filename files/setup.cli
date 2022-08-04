@@ -19,6 +19,23 @@
 
 /profile=full-ha:clone(to-profile=P1)
 
+batch
+/profile=P1/subsystem=infinispan/cache-container=web-1:add
+/profile=P1/subsystem=infinispan/cache-container=web-1/transport=jgroups:add
+/profile=P1/subsystem=infinispan/cache-container=web-1/distributed-cache=dist-1:add
+/profile=P1/subsystem=infinispan/cache-container=web-1/distributed-cache=dist-1/component=locking:add(isolation=REPEATABLE_READ)
+/profile=P1/subsystem=infinispan/cache-container=web-1/distributed-cache=dist-1/component=transaction:add(mode=BATCH)
+/profile=P1/subsystem=infinispan/cache-container=web-1/distributed-cache=dist-1/store=file:add(relative-to="jboss.server.data.dir")
+/profile=P1/subsystem=infinispan/cache-container=web-1/replicated-cache=sso:add
+/profile=P1/subsystem=infinispan/cache-container=web-1/replicated-cache=routing:add
+/profile=P1/subsystem=infinispan/cache-container=web-1:write-attribute(name=default-cache,value=dist-1)
+/profile=P1/subsystem=infinispan/cache-container=web-1:write-attribute(name=modules,value=[org.wildfly.clustering.web.infinispan])
+run-batch
+
+/profile=P1/subsystem=distributable-web/infinispan-session-management=default:write-attribute(name=cache-container,value=web-1)
+/profile=P1/subsystem=distributable-web/infinispan-single-sign-on-management=default:write-attribute(name=cache-container,value=web-1)
+/profile=P1/subsystem=distributable-web/routing=infinispan:write-attribute(name=cache-container,value=web-1)
+
 /profile=P1/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
 
 /profile=P1/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
@@ -54,6 +71,23 @@ run-batch
 /server-group=SG1:start-servers(blocking=true)
 
 /profile=full-ha:clone(to-profile=P2)
+
+batch
+/profile=P2/subsystem=infinispan/cache-container=web-2:add
+/profile=P2/subsystem=infinispan/cache-container=web-2/transport=jgroups:add
+/profile=P2/subsystem=infinispan/cache-container=web-2/distributed-cache=dist-2:add
+/profile=P2/subsystem=infinispan/cache-container=web-2/distributed-cache=dist-2/component=locking:add(isolation=REPEATABLE_READ)
+/profile=P2/subsystem=infinispan/cache-container=web-2/distributed-cache=dist-2/component=transaction:add(mode=BATCH)
+/profile=P2/subsystem=infinispan/cache-container=web-2/distributed-cache=dist-2/store=file:add(relative-to="jboss.server.data.dir")
+/profile=P2/subsystem=infinispan/cache-container=web-2/replicated-cache=sso:add
+/profile=P2/subsystem=infinispan/cache-container=web-2/replicated-cache=routing:add
+/profile=P2/subsystem=infinispan/cache-container=web-2:write-attribute(name=modules,value=[org.wildfly.clustering.web.infinispan])
+/profile=P2/subsystem=infinispan/cache-container=web-2:write-attribute(name=default-cache,value=dist-2)
+run-batch
+
+/profile=P2/subsystem=distributable-web/infinispan-session-management=default:write-attribute(name=cache-container,value=web-2)
+/profile=P2/subsystem=distributable-web/infinispan-single-sign-on-management=default:write-attribute(name=cache-container,value=web-2)
+/profile=P2/subsystem=distributable-web/routing=infinispan:write-attribute(name=cache-container,value=web-2)
 
 /profile=P2/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
 

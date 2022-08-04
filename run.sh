@@ -1,5 +1,13 @@
 #!/bin/bash
 
+function cleanup() {
+    podman rm -f host-controller-1 host-controller-2 domain-controller
+
+    buildah rmi -f host-controller-1 host-controller-2 domain-controller
+
+    podman network rm demo
+}
+
 function download() {
     local URL=$1
     local ARCHIVE=$(echo $URL | awk 'BEGIN { FS="/" } { print $NF }')
@@ -18,11 +26,7 @@ function download() {
 
 download https://download.jboss.org/wildfly/23.0.2.Final/wildfly-23.0.2.Final.tar.gz
 
-podman rm -f host-controller-1 host-controller-2 domain-controller
-
-buildah rmi -f host-controller-1 host-controller-2 domain-controller
-
-podman network rm demo
+cleanup
 
 unset HC2_ADDR HC1_ADDR DEMO_SUBNET DEMO_GWADDR
 
