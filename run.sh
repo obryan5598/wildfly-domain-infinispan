@@ -1,11 +1,11 @@
 #!/bin/bash
 
 function cleanup() {
-    podman rm -f host-controller-1 host-controller-2 domain-controller
+    docker rm -f host-controller-1 host-controller-2 domain-controller infinispan
 
-    buildah rmi -f host-controller-1 host-controller-2 domain-controller
+    docker rmi -f host-controller-1 host-controller-2 domain-controller infinispan
 
-    podman network rm demo
+    docker network rm demo
 }
 
 function compile_code() {
@@ -26,13 +26,13 @@ function configure_cluster() {
     echo -n "Please wait while the cluster is starting up "
 
     for i in $(seq 1 $T); do
-	echo -n "."
-	sleep 1s
+	echo "."
+	sleep 1
     done
 
     echo
 
-    podman exec -it domain-controller /opt/wildfly-23.0.2.Final/bin/jboss-cli.sh --connect --file=/tmp/setup.cli
+    docker exec -it domain-controller /opt/wildfly-23.0.2.Final/bin/jboss-cli.sh --connect --file=/tmp/setup.cli
 }
 
 function download() {
@@ -52,11 +52,11 @@ function download() {
 }
 
 function setup() {
-    podman network create demo
+    docker network create demo
 }
 
 function start_node() {
-    local DEMO_GWADDR=$(podman network inspect demo | jq -r .[0].subnets[0].gateway)
+    local DEMO_GWADDR=$(docker network inspect demo | jq -r .[0].IPAM.Config[0].Gateway)
     local DEMO_SUBNET=$(echo $DEMO_GWADDR | cut -d '.' -f 1-3)
     local K="$(( $(echo $DEMO_GWADDR | cut -d '.' -f 4) + 1 ))"
     local CMD=""
@@ -71,14 +71,15 @@ function start_node() {
 	shift 1
     fi
 
-    buildah build -t $NAME -f containers/Dockerfile.$NAME
+    docker build -t $NAME -f containers/Dockerfile.$NAME .
 
-    podman run --name $NAME --hostname=$NAME -dit --network demo $(for i in "$@" ; do echo -n " -p $i" ; done) $NAME $CMD
+    docker run --name $NAME --hostname=$NAME -dit --network demo $(for i in "$@" ; do echo " -p $i" ; done) $NAME $CMD
 }
 
 __START=$(date -u +%s)
 
 download https://download.jboss.org/wildfly/23.0.2.Final/wildfly-23.0.2.Final.tar.gz
+download https://downloads.jboss.org/infinispan/13.0.10.Final/infinispan-server-13.0.10.Final.zip
 
 cleanup
 
@@ -90,6 +91,7 @@ setup
 start_node domain-controller 9990:9990
 start_node host-controller 1 8080:8080 8180:8180
 start_node host-controller 2 8081:8080 8181:8180
+start_node infinispan 11222:11222
 
 configure_cluster 120
 

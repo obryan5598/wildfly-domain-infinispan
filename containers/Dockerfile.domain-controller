@@ -3,8 +3,8 @@ FROM alpine
 COPY products/wildfly-23.0.2.Final.tar.gz /opt/
 COPY files/domain-controller.cli /tmp/
 COPY files/setup.cli /tmp/
-COPY applications/appv1/target/appv1.war /tmp/
-COPY applications/appv2/target/appv2.war /tmp/
+COPY applications/appv1/target/app.war /tmp/v1/
+COPY applications/appv2/target/app.war /tmp/v2/
 
 RUN apk add bash curl openjdk11-jdk \
  && tar -xzf /opt/wildfly-23.0.2.Final.tar.gz -C /opt/ 2>&1 > /dev/null \

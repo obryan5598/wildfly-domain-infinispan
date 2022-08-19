@@ -1,0 +1,11 @@
+FROM alpine
+
+COPY ../products/infinispan-server-13.0.10.Final.zip /opt/
+COPY ../files/infinispan.xml /tmp/
+
+RUN apk add bash curl openjdk11-jdk \
+ && unzip -d /opt /opt/infinispan-server-13.0.10.Final.zip 2>&1 > /dev/null \
+ && cp /tmp/infinispan.xml /opt/infinispan-server-13.0.10.Final/server/conf \
+ && /opt/infinispan-server-13.0.10.Final/bin/cli.sh user create admin -p password -g admin 
+
+ENTRYPOINT [ "/opt/infinispan-server-13.0.10.Final/bin/server.sh"]

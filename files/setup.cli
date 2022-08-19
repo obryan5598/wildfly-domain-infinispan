@@ -1,3 +1,4 @@
+# CLEAN UP DEFAULTS
 /server-group=main-server-group:stop-servers(blocking=true)
 
 /host=host-controller-1/server-config=server-one:remove
@@ -12,21 +13,17 @@
 
 /server-group=other-server-group:remove
 
+# ADDING JGROUPS & INFINISPAN SOCKET BINDINGS
 /socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H1SG1S1:add(host=host-controller-1,port=7600)
 /socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H1SG2S1:add(host=host-controller-1,port=7700)
 /socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H2SG1S2:add(host=host-controller-2,port=7600)
 /socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=H2SG2S2:add(host=host-controller-2,port=7700)
+/socket-binding-group=full-ha-sockets/remote-destination-outbound-socket-binding=rhdg-server:add(host=infinispan, port=11222)
 
+# CLONING THE FULL-HA PROFILE TO P1
 /profile=full-ha:clone(to-profile=P1)
 
-/profile=P1/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
-
-/profile=P1/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
-
-/profile=P1/subsystem=elytron/http-authentication-factory=test-auth-factory-2:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test2}]}])
-
-/profile=P1/subsystem=undertow/application-security-domain=test2:add(http-authentication-factory=test-auth-factory-2)
-
+# SETTING TCPPING CLUSTERING MODE
 batch
 /profile=P1/subsystem=jgroups/stack=tcpping:add
 /profile=P1/subsystem=jgroups/stack=tcpping/transport=TCP:add(socket-binding=jgroups-tcp)
@@ -46,23 +43,35 @@ run-batch
 
 /profile=P1/subsystem=jgroups/channel=ee:write-attribute(name=statistics-enabled,value=true)
 
+# CREATING A REMOTE CACHE CONTAINER
+batch
+/profile=P1/subsystem=infinispan/remote-cache-container=rhdg-session-cache:add(default-remote-cluster=rhdg-server, statistics-enabled=true, properties={"infinispan.client.hotrod.auth_username" => "admin", "infinispan.client.hotrod.auth_password" => "password"}, modules=["org.wildfly.clustering.web.hotrod"])
+/profile=P1/subsystem=infinispan/remote-cache-container=rhdg-session-cache/remote-cluster=rhdg-server:add(socket-bindings=[rhdg-server])
+run-batch
+
+# SETTING THE SESSION THROUGH DISTRIBUTABLE-WEB SUBSYSTEM
+batch
+/profile=P1/subsystem=distributable-web/infinispan-session-management=default/affinity=primary-owner:add()
+/profile=P1/subsystem=distributable-web/hotrod-session-management=web-cache:add(remote-cache-container=rhdg-session-cache,granularity=SESSION)
+/profile=P1/subsystem=distributable-web/hotrod-session-management=web-cache/affinity=local:add()
+/profile=P1/subsystem=distributable-web:write-attribute(name=default-session-management, value=web-cache)
+run-batch
+
+# ADDING SOCKET BINDINGS TO PROFILE P1
 /server-group=SG1:add(profile=P1,socket-binding-group=full-ha-sockets)
 
+# ADDING SERVER-CONFIG TO BOTH HOST CONTROLLERS AND BINDING TO SERVERGROUP SG1
 /host=host-controller-1/server-config=H1SG1S1:add(group=SG1,auto-start=true)
 /host=host-controller-2/server-config=H2SG1S2:add(group=SG1,auto-start=true)
 
+# STARTING SERVERGROUP SG1
 /server-group=SG1:start-servers(blocking=true)
 
+
+# CLONING THE FULL-HA PROFILE TO P1
 /profile=full-ha:clone(to-profile=P2)
 
-/profile=P2/subsystem=elytron/http-authentication-factory=test-auth-factory-1:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test1}]}])
-
-/profile=P2/subsystem=undertow/application-security-domain=test1:add(http-authentication-factory=test-auth-factory-1)
-
-/profile=P2/subsystem=elytron/http-authentication-factory=test-auth-factory-2:add(http-server-mechanism-factory=global,security-domain=ApplicationDomain,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=test2}]}])
-
-/profile=P2/subsystem=undertow/application-security-domain=test2:add(http-authentication-factory=test-auth-factory-2)
-
+# SETTING TCPPING CLUSTERING MODE
 batch
 /profile=P2/subsystem=jgroups/stack=tcpping:add
 /profile=P2/subsystem=jgroups/stack=tcpping/transport=TCP:add(socket-binding=jgroups-tcp)
@@ -82,12 +91,31 @@ run-batch
 
 /profile=P2/subsystem=jgroups/channel=ee:write-attribute(name=statistics-enabled,value=true)
 
+
+# CREATING A REMOTE CACHE CONTAINER
+batch
+/profile=P2/subsystem=infinispan/remote-cache-container=rhdg-session-cache:add(default-remote-cluster=rhdg-server, statistics-enabled=true, properties={"infinispan.client.hotrod.auth_username" => "admin", "infinispan.client.hotrod.auth_password" => "password"}, modules=["org.wildfly.clustering.web.hotrod"])
+/profile=P2/subsystem=infinispan/remote-cache-container=rhdg-session-cache/remote-cluster=rhdg-server:add(socket-bindings=[rhdg-server])
+run-batch
+
+# SETTING THE SESSION THROUGH DISTRIBUTABLE-WEB SUBSYSTEM
+batch
+/profile=P2/subsystem=distributable-web/infinispan-session-management=default/affinity=primary-owner:add()
+/profile=P2/subsystem=distributable-web/hotrod-session-management=web-cache:add(remote-cache-container=rhdg-session-cache,granularity=SESSION)
+/profile=P2/subsystem=distributable-web/hotrod-session-management=web-cache/affinity=local:add()
+/profile=P2/subsystem=distributable-web:write-attribute(name=default-session-management, value=web-cache)
+run-batch
+
+# ADDING SOCKET BINDINGS TO PROFILE P2
 /server-group=SG2:add(profile=P2,socket-binding-group=full-ha-sockets)
 
+# ADDING SERVER-CONFIG TO BOTH HOST CONTROLLERS AND BINDING TO SERVERGROUP SG2 WITH OFFSET=100
 /host=host-controller-1/server-config=H1SG2S1:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
 /host=host-controller-2/server-config=H2SG2S2:add(group=SG2,auto-start=true,socket-binding-port-offset=100)
 
+# STARTING SERVERGROUP SG2
 /server-group=SG2:start-servers(blocking=true)
 
-deploy /tmp/appv1.war --server-groups=SG1,SG2
-deploy /tmp/appv2.war --server-groups=SG1,SG2
+# DEPLOYING APPLICATIONS TO SERVER GROUPS WITH DIFFERENT NAME AND SAME RUNTIME NAME
+deploy /tmp/v1/app.war --enabled --name=appv1.war --runtime-name=app.war --server-groups=SG1
+deploy /tmp/v2/app.war --enabled --name=appv2.war --runtime-name=app.war --server-groups=SG2
